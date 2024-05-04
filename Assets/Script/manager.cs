@@ -12,9 +12,10 @@ namespace ProceduralModeling_AI
         MeshRenderer rend;
 
         [SerializeField] private Vector3 offsetPos0 = new Vector3(-1.0f, 4.0f, -1.0f);
-        [SerializeField] private Vector3 offsetPos1 = new Vector3(1.5f, 3.0f, -1.0f);
-        [SerializeField] private Vector3 offsetPos2 = new Vector3(-2.0f, 3.0f, 1.0f);
-        [SerializeField] private Vector3 offsetPos3 = new Vector3(1.0f, 3.0f, 1.0f);
+        [SerializeField] private float a = 0.8f; // basePos0 to basePos1
+        [SerializeField] private float b = 0.8f; // basePos0 to offsetPos0
+        [SerializeField] private float c = 0.8f; // basePos0 to basePos2
+        [SerializeField] private float d = 0.8f; // basePos0 to offsetPos0
         [SerializeField] private Material mat;
         [SerializeField] private Vector3 ray_orig = new Vector3(-2.0f, 4.0f, 0.0f);
         [SerializeField] private Vector3 ray_dir = new Vector3(5.0f, -5.0f, -3.0f);
@@ -23,6 +24,10 @@ namespace ProceduralModeling_AI
         private Vector3 basePos1 = new Vector3(1.0f, 0.0f, -1.0f);
         private Vector3 basePos2 = new Vector3(-1.0f, 0.0f, 1.0f);
         private Vector3 basePos3 = new Vector3(1.0f, 0.0f, 1.0f);
+
+        private Vector3 offsetPos1 = new Vector3(1.5f, 3.0f, -1.0f);
+        private Vector3 offsetPos2 = new Vector3(-2.0f, 3.0f, 1.0f);
+        private Vector3 offsetPos3 = new Vector3(1.0f, 3.0f, 1.0f);
 
         private Vector3 center = new Vector3(5.0f, 0.0f, 0.0f);
 
@@ -81,10 +86,12 @@ namespace ProceduralModeling_AI
 
         private Mesh BuildMesh()
         {
+            offsetPos1 = a * (basePos1 - basePos0) + b * (offsetPos0 - basePos0) + basePos0;
+            offsetPos2 = c * (basePos2 - basePos0) + d * (offsetPos0 - basePos0) + basePos0;
+
             var mesh = new Mesh();
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
-
 
             // shell
             {
@@ -604,7 +611,9 @@ namespace ProceduralModeling_AI
 
                 float tPrevious = tStart;
                 Color color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
-                while (((hStart > hEnd && hEnd < h) || (hStart <= hEnd && h < hEnd)) && count < 1000)
+                while (
+                    ((hStart > hEnd && hEnd < h) || (hStart <= hEnd && h < hEnd)) &&
+                    count < 3000)
                 {
                     h = h + delta;
                     {
@@ -633,8 +642,8 @@ namespace ProceduralModeling_AI
                     //Debug.Log("uvwPrevious: " + uvwPrevious + " uvw: " + uvw);
                     tPrevious = distance;
                     uvwPrevious = uvw;
-                    color[0] -= 0.004f;
-                    color[2] += 0.004f;
+                    color[0] -= 0.002f;
+                    color[2] += 0.002f;
                     count++;
                 }
 
