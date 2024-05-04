@@ -24,7 +24,7 @@ namespace ProceduralModeling_AI
         private Vector3 basePos2 = new Vector3(-1.0f, 0.0f, 1.0f);
         private Vector3 basePos3 = new Vector3(1.0f, 0.0f, 1.0f);
 
-        private Vector3 center = new Vector3(10.0f, 0.0f, 0.0f);
+        private Vector3 center = new Vector3(5.0f, 0.0f, 0.0f);
 
         private Vector3 texBasePos0 = new Vector3(-1.0f, 0.0f, -1.0f);
         private Vector3 texBasePos1 = new Vector3(1.0f, 0.0f, -1.0f);
@@ -504,9 +504,9 @@ namespace ProceduralModeling_AI
             ;
             Vector3 ex = (ray_dir.x < ray_dir.y && ray_dir.x < ray_dir.z) ? axes[0] :
                 (ray_dir.y < ray_dir.z) ? axes[1] : axes[2];
-            Vector3 e1 = Vector3.Cross(ray_dir, ex);
+            Vector3 e1 = Vector3.Cross(ex, ray_dir);
             e1.Normalize();
-            Vector3 e0 = Vector3.Cross(e1, ray_dir);
+            Vector3 e0 = Vector3.Cross(ray_dir, e1);
             e0.Normalize();
 
             Vector3[] normals = new Vector3[3];
@@ -550,9 +550,9 @@ namespace ProceduralModeling_AI
             Vector2 UV0;
             Vector2 E0;
             Vector2 E1;
-            float uLen = 54.5f;
-            float vLen = 50.5f;
-            Vector2 uvwCenter = new Vector2(-2.0f, -24.0f);
+            float uLen = 1.0f;
+            float vLen = 1.0f;
+            Vector2 uvwCenter = new Vector2(center[0] + 0.0f, center[2] + 0.0f);
             //float uLen = 4.0f;
             //float vLen = 4.0f;
             //float2 uvwCenter = make_float2(0.0f, 0.0f);
@@ -560,9 +560,9 @@ namespace ProceduralModeling_AI
             // 1 is the largest angle.
             if (pattern == 0)
             {
-                UV0 = new Vector2(uLen, -vLen) + uvwCenter;
-                E0 = new Vector2(-2 * uLen, 0.0f);
-                E1 = new Vector2(-2 * uLen, 2 * vLen);
+                UV0 = new Vector2(-uLen, -vLen) + uvwCenter;
+                E0 = new Vector2(2 * uLen, 0.0f);
+                E1 = new Vector2(0.0f, 2 * vLen);
             }
             else
             {
@@ -578,8 +578,9 @@ namespace ProceduralModeling_AI
             float v1 = (na * E0.y + nb * E1.y + d * UV0.y).y;
             float v0 = (na * E0.y + nb * E1.y + d * UV0.y).z;
 
-            const float scale = 104.0f;
-            const float wCenter = 128.0f;
+            // wlength
+            const float scale = 2.0f;
+            const float wCenter = 0.0f;
             float delta = 0.001f;
             // DDA
             {
@@ -590,20 +591,28 @@ namespace ProceduralModeling_AI
                 }
 
                 int count = 0;
-                float h = hStart; 
+                float h = hStart;
                 float denom;
                 Vector3 uvw = new Vector3(0.0f, 0.0f, 0.0f);
+                Vector3 uvwPrevious = new Vector3(0.0f, 0.0f, 0.0f);
+                {
+                    denom = d2 * h * h + d1 * h + d0;
+                    uvwPrevious[0] = (u2 * h * h + u1 * h + u0) / denom;
+                    uvwPrevious[2] = (v2 * h * h + v1 * h + v0) / denom;
+                    uvwPrevious[1] = h * scale - wCenter;
+                }
+
                 float tPrevious = tStart;
-                Color color = new Color(0.5f, 0.0f, 0.0f, 1.0f);
+                Color color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
                 while (((hStart > hEnd && hEnd < h) || (hStart <= hEnd && h < hEnd)) && count < 1000)
                 {
                     h = h + delta;
                     {
-                        // axis: w
-                        uvw[2] = h;
+                        // u, w, v
                         denom = d2 * h * h + d1 * h + d0;
                         uvw[0] = (u2 * h * h + u1 * h + u0) / denom;
-                        uvw[1] = (v2 * h * h + v1 * h + v0) / denom;
+                        uvw[2] = (v2 * h * h + v1 * h + v0) / denom;
+                        uvw[1] = h * scale - wCenter;
                     }
                     float alpha = (a2 * h * h + a1 * h + a0) / denom;
                     float beta = (b2 * h * h + b1 * h + b0) / denom;
@@ -611,19 +620,25 @@ namespace ProceduralModeling_AI
                     Vector3 s1 = basePos1 + normals[1] * h;
                     Vector3 s2 = basePos2 + normals[2] * h;
                     float distance = Vector3.Dot(ray_dir, (1 - alpha - beta) * s0 + alpha * s1 + beta * s2 - ray_orig);
+                    // draw linear ray
                     Debug.DrawLine(ray_orig + ray_dir * tPrevious, ray_orig + ray_dir * distance, color);
 
-                    Debug.Log("alpha: " + alpha);
-                    Debug.Log("beta: " + beta);
-                    Debug.Log("tPrevious: " + tPrevious + " t: " + distance + " tStart: " + tStart + " tEnd: " + tEnd);
-                    Debug.Log("h: " + h + " hStart: " + hStart + " hEnd: " + hEnd);
+                    // draw nonlinear ray
+                    Debug.DrawLine(uvwPrevious, uvw, color);
+
+                    //Debug.Log("alpha: " + alpha);
+                    //Debug.Log("beta: " + beta);
+                    //Debug.Log("tPrevious: " + tPrevious + " t: " + distance + " tStart: " + tStart + " tEnd: " + tEnd);
+                    //Debug.Log("h: " + h + " hStart: " + hStart + " hEnd: " + hEnd);
+                    //Debug.Log("uvwPrevious: " + uvwPrevious + " uvw: " + uvw);
                     tPrevious = distance;
-                    color[1] += 0.004f;
+                    uvwPrevious = uvw;
+                    color[0] -= 0.004f;
                     color[2] += 0.004f;
                     count++;
                 }
 
-                Debug.Log("count: " + count);
+                //Debug.Log("count: " + count);
             }
         }
 
@@ -637,8 +652,8 @@ namespace ProceduralModeling_AI
             //if (inIntersect && outIntersect)
             {
                 Debug.DrawLine(ray_orig, ray_orig + ray_dir * tStart, Color.white);
-                Debug.DrawLine(ray_orig + ray_dir * tStart, ray_orig + ray_dir * tEnd, Color.magenta);
-                Debug.DrawLine(ray_orig + ray_dir * tEnd, ray_orig + ray_dir*10.0f, Color.white);
+                //Debug.DrawLine(ray_orig + ray_dir * tStart, ray_orig + ray_dir * tEnd, Color.magenta);
+                Debug.DrawLine(ray_orig + ray_dir * tEnd, ray_orig + ray_dir * 10.0f, Color.white);
             }
             transmittanceHDDA(0);
         }
