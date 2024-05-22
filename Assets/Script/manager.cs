@@ -11,41 +11,39 @@ namespace ProceduralModeling_AI
         MeshFilter filt;
         MeshRenderer rend;
 
-        [SerializeField] private Vector3 offsetPos0 = new Vector3(-1.0f, 4.0f, -1.0f);
-        [SerializeField] private float a = 0.8f; // basePos0 to basePos1
-        [SerializeField] private float b = 0.8f; // basePos0 to offsetPos0
-        [SerializeField] private float c = 0.8f; // basePos0 to basePos2
-        [SerializeField] private float d = 0.8f; // basePos0 to offsetPos0
+        [SerializeField] private Vector3 offsetPos0 = new Vector3(-1.0f, 3.0f, -1.0f);
+        [SerializeField] private Vector3 offsetPos1 = new Vector3(1.0f, 3.0f, -1.0f);
+        [SerializeField] private Vector3 offsetPos2 = new Vector3(-1.0f, 3.0f, 1.0f);
+        [SerializeField] private Vector3 offsetPos3 = new Vector3(1.0f, 3.0f, 1.0f);
+
         [SerializeField] private Material mat;
-        [SerializeField] private Vector3 ray_orig = new Vector3(-2.0f, 4.0f, 0.0f);
-        [SerializeField] private Vector3 ray_dir = new Vector3(5.0f, -5.0f, -3.0f);
-        
+        [SerializeField] private Vector3 ray_orig = new Vector3(-2.0f, 3.0f, 0.3f);
+        [SerializeField] private Vector3 ray_dir = new Vector3(0.859812f, -0.490839f, -0.140707f);
+
+        private float uLen = 1.0f;
+        private float vLen = 1.0f;
+
         private Vector3 basePos0 = new Vector3(-1.0f, 0.0f, -1.0f);
         private Vector3 basePos1 = new Vector3(1.0f, 0.0f, -1.0f);
         private Vector3 basePos2 = new Vector3(-1.0f, 0.0f, 1.0f);
         private Vector3 basePos3 = new Vector3(1.0f, 0.0f, 1.0f);
-
-        private Vector3 offsetPos1 = new Vector3(1.5f, 3.0f, -1.0f);
-        private Vector3 offsetPos2 = new Vector3(-2.0f, 3.0f, 1.0f);
-        private Vector3 offsetPos3 = new Vector3(1.0f, 3.0f, 1.0f);
-
         private Vector3 center = new Vector3(5.0f, 0.0f, 0.0f);
 
-        private Vector3 texBasePos0 = new Vector3(-1.0f, 0.0f, -1.0f);
-        private Vector3 texBasePos1 = new Vector3(1.0f, 0.0f, -1.0f);
-        private Vector3 texBasePos2 = new Vector3(-1.0f, 0.0f, 1.0f);
-        private Vector3 texBasePos3 = new Vector3(1.0f, 0.0f, 1.0f);
+        private Vector3 texBasePos0;
+        private Vector3 texBasePos1;
+        private Vector3 texBasePos2;
+        private Vector3 texBasePos3;
 
-        private Vector3 texOffsetPos0 = new Vector3(-1.0f, 2.0f, -1.0f);
-        private Vector3 texOffsetPos1 = new Vector3(1.0f, 2.0f, -1.0f);
-        private Vector3 texOffsetPos2 = new Vector3(-1.0f, 2.0f, 1.0f);
-        private Vector3 texOffsetPos3 = new Vector3(1.0f, 2.0f, 1.0f);
+        private Vector3 texOffsetPos0;
+        private Vector3 texOffsetPos1;
+        private Vector3 texOffsetPos2;
+        private Vector3 texOffsetPos3;
 
         private bool inIntersect;
         private bool outIntersect;
-        private float tStart;
-        private float tEnd;
-        private float hStart;
+        private float tin;
+        private float tout;
+        private float hin;
         private float hEnd;
         private int MAX_ITERATIONS = 10;
         private int shellOffset = 8;
@@ -74,6 +72,16 @@ namespace ProceduralModeling_AI
                 rend = this.gameObject.AddComponent<MeshRenderer>();
             }
 
+            texBasePos0 = new Vector3(-uLen, 0.0f, -vLen);
+            texBasePos1 = new Vector3(uLen, 0.0f, -vLen);
+            texBasePos2 = new Vector3(-uLen, 0.0f, vLen);
+            texBasePos3 = new Vector3(uLen, 0.0f, vLen);
+
+            texOffsetPos0 = new Vector3(-uLen, 3.0f, -vLen);
+            texOffsetPos1 = new Vector3(uLen, 3.0f, -vLen);
+            texOffsetPos2 = new Vector3(-uLen, 3.0f, vLen);
+            texOffsetPos3 = new Vector3(uLen, 3.0f, vLen);
+
             texOffsetPos0 += center;
             texOffsetPos1 += center;
             texOffsetPos2 += center;
@@ -86,9 +94,6 @@ namespace ProceduralModeling_AI
 
         private Mesh BuildMesh()
         {
-            offsetPos1 = a * (basePos1 - basePos0) + b * (offsetPos0 - basePos0) + basePos0;
-            offsetPos2 = c * (basePos2 - basePos0) + d * (offsetPos0 - basePos0) + basePos0;
-
             var mesh = new Mesh();
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
@@ -271,6 +276,140 @@ namespace ProceduralModeling_AI
             return mesh;
         }
 
+        float ab_minus_cd(float a, float b, float c, float d)
+        {
+
+            float w = d * c;
+            float e = -d * c + w;
+            float f = a * b - w;
+            return f + e;
+        }
+
+        bool in_range(float param, float range_min, float range_max)
+        {
+            return (range_min <= param && param <= range_max);
+        }
+
+        bool in_range(float param, float range_min, float range_max, float e)
+        {
+            return (range_min - e <= param && param <= range_max + e);
+        }
+        void update_h(float h)
+        {
+            hin = Mathf.Min(hin, h);
+            hEnd = Mathf.Max(hEnd, h);
+        }
+
+    private void judgeCoolPatchIntersection(Vector3[] pos)
+        {
+            // 01 ----------- 11
+            // |               |
+            // | e00       e11 |
+            // |      e10      |
+            // 00 ----------- 10
+            Vector3 Q00 = pos[0];
+            Vector3 q01 = pos[2];
+            Vector3 Q10 = pos[1];
+            Vector3 q11 = pos[3];
+            
+            Vector3 e10 = Q10 - Q00;
+            Vector3 e11 = q11 - Q10;
+            Vector3 e00 = q01 - Q00;
+
+            Vector3 q00 = Q00 - ray_orig;
+            Vector3 q10 = Q10 - ray_orig;
+
+            // a + b u + c u^2
+            float a = Vector3.Dot(Vector3.Cross(q00, ray_dir), e00);
+            float b = Vector3.Dot(Vector3.Cross(q10, ray_dir), e11);
+            float c = Vector3.Dot(Vector3.Cross(q01 - q11, ray_dir), e10);
+
+            b -= a + c;
+            float det = b * b - 4 * a * c;
+            if (0 > det)
+            {
+                return;
+            }
+
+            // Solve for u
+            float u1, u2;
+            if (c == 0) // trapezoid
+            {
+                u1 = -a / b;
+                u2 = -1;
+            }
+            else
+            {
+                float content = Mathf.Sqrt(det) * (b >= 0 ? 1 : -1);
+                u1 = (-b - content) / 2;
+                u2 = a / u1;
+                u1 /= c;
+            }
+
+            if (in_range(u1, 0, 1))
+            {
+                Vector3 pa = (1 - u1) * q00 + u1 * q10; // origin to the intersection point
+                Vector3 pb = (1 - u1) * e00 + u1 * e11;
+                Vector3 n = Vector3.Cross(ray_dir, pb);
+                float n2 = Vector3.Dot(n, n);
+                n = Vector3.Cross(n, pa);
+                float v1 = Vector3.Dot(n, ray_dir);
+                if (0 <= v1 && v1 <= n2)
+                {
+                    float h = v1 / n2;
+                    if (!inIntersect)
+                    {
+                        tin = Vector3.Dot(n, pb) / n2;
+                        hin = h;
+                        inIntersect = true;
+                    }
+                    else
+                    {
+                        tout = Vector3.Dot(n, pb) / n2;
+                        hEnd = h;
+                        if (tout < tin)
+                        {
+                            swap(ref tin, ref tout);
+                            swap(ref hin, ref hEnd);
+                        }
+
+                        outIntersect = true;
+                    }
+                }
+            }
+
+            if (in_range(u2, 0, 1))
+            {
+                Vector3 pa = (1 - u2) * q00 + u2 * q10;
+                Vector3 pb = (1 - u2) * e00 + u2 * e11;
+                Vector3 n = Vector3.Cross(ray_dir, pb);
+                float n2 = Vector3.Dot(n, n);
+                n = Vector3.Cross(n, pa);
+                float v2 = Vector3.Dot(n, ray_dir);
+                if (0 <= v2 && v2 <= n2)
+                {
+                    float h = v2 / n2;
+                    if (!inIntersect)
+                    {
+                        tin = Vector3.Dot(n, pb) / n2;
+                        hin = h;
+                        inIntersect = true;
+                    }
+                    else
+                    {
+                        tout = Vector3.Dot(n, pb) / n2;
+                        hEnd = h;
+                        if (tout < tin)
+                        {
+                            swap(ref tin, ref tout);
+                            swap(ref hin, ref hEnd);
+                        }
+                        outIntersect = true;
+                    }
+                }
+            }
+        }
+
         private bool isInsideTriangle(Vector3[] judgedTriangle, Vector3 I, Vector3 n)
         {
 
@@ -294,7 +433,8 @@ namespace ProceduralModeling_AI
             normals[1] = offsetPos1 - basePos1;
             normals[2] = offsetPos2 - basePos2;
             Vector3 s = I - basePos0 - h * normals[0];
-            Vector3 t = Vector3.Cross(basePos2 + h * normals[2] - basePos0 - h * normals[0], basePos1 + h * normals[1] - basePos0 - h * normals[0]);
+            Vector3 t = Vector3.Cross(basePos2 + h * normals[2] - basePos0 - h * normals[0],
+                basePos1 + h * normals[1] - basePos0 - h * normals[0]);
             float f = Vector3.Dot(s, t);
             return f;
         }
@@ -309,7 +449,8 @@ namespace ProceduralModeling_AI
             for (int i = 0; i < MAX_ITERATIONS; i++)
             {
                 Vector3 s = I - basePos0 - hr * normals[0];
-                Vector3 t = Vector3.Cross(basePos1 + hr * normals[1] - basePos0 - hr * normals[0], basePos2 + hr * normals[2] - basePos0 - hr * normals[0]);
+                Vector3 t = Vector3.Cross(basePos1 + hr * normals[1] - basePos0 - hr * normals[0],
+                    basePos2 + hr * normals[2] - basePos0 - hr * normals[0]);
                 float f = Vector3.Dot(s, t);
                 if (Mathf.Abs(f) < 1e-6f)
                 {
@@ -318,12 +459,15 @@ namespace ProceduralModeling_AI
 
                 // update h using Newton's method
                 float u = Vector3.Dot(-normals[0], t);
-                Vector3 v = Vector3.Cross(basePos2 + hr * normals[2] - basePos0 - hr * normals[0], normals[1] - normals[0]) + Vector3.Cross(basePos1 + hr * normals[1] - basePos0 - hr * normals[0], normals[2] - normals[0]);
+                Vector3 v =
+                    Vector3.Cross(basePos2 + hr * normals[2] - basePos0 - hr * normals[0], normals[1] - normals[0]) +
+                    Vector3.Cross(basePos1 + hr * normals[1] - basePos0 - hr * normals[0], normals[2] - normals[0]);
                 float df = u + Vector3.Dot(s, v);
                 float hn = hr - f / df;
                 hn = Mathf.Max(start, Mathf.Min(end, hn));
                 hr = hn;
             }
+
             return hr;
         }
 
@@ -344,12 +488,24 @@ namespace ProceduralModeling_AI
             {
                 rootsOfDerivative[i] = 0;
             }
+
             float a1 = Vector3.Dot(-normals[0], Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0])); // hh
-            float b1 = Vector3.Dot(-normals[0], Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) + Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0])); // h
+            float b1 = Vector3.Dot(-normals[0],
+                Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) +
+                Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0])); // h
             float c1 = Vector3.Dot(-normals[0], Vector3.Cross(basePos1 - basePos0, basePos2 - basePos0));
-            float a2 = Vector3.Dot(-normals[0], Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0]) + Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0])); // hh
-            float b2 = Vector3.Dot(I - basePos0, Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0]) + Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0])) + Vector3.Dot(-normals[0], Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) + Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0])); // h
-            float c2 = Vector3.Dot(I - basePos0, Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) + Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0]));
+            float a2 = Vector3.Dot(-normals[0],
+                Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0]) +
+                Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0])); // hh
+            float b2 =
+                Vector3.Dot(I - basePos0,
+                    Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0]) +
+                    Vector3.Cross(normals[1] - normals[0], normals[2] - normals[0])) + Vector3.Dot(-normals[0],
+                    Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) +
+                    Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0])); // h
+            float c2 = Vector3.Dot(I - basePos0,
+                Vector3.Cross(normals[1] - normals[0], basePos2 - basePos0) +
+                Vector3.Cross(basePos1 - basePos0, normals[2] - normals[0]));
             float a = a1 + a2;
             float b = b1 + b2;
             float c = c1 + c2;
@@ -396,12 +552,14 @@ namespace ProceduralModeling_AI
                     float h = findRoot(I, intervalStart, rootsOfDerivative[i]);
                     return h;
                 }
+
                 intervalStart = rootsOfDerivative[i];
                 fa = fb;
             }
+
             return -1.0f;
         }
-        
+
         private void swap(ref float a, ref float b)
         {
             float tmp = a;
@@ -419,19 +577,20 @@ namespace ProceduralModeling_AI
             {
                 if (!inIntersect)
                 {
-                    tStart = t;
+                    tin = t;
                     inIntersect = true;
-                    hStart = solveEquation(I);
+                    hin = solveEquation(I);
                 }
                 else
                 {
-                    tEnd = t;
+                    tout = t;
                     hEnd = solveEquation(I);
-                    if (tEnd < tStart)
+                    if (tout < tin)
                     {
-                        swap(ref tStart, ref tEnd);
-                        swap(ref hStart, ref hEnd);
+                        swap(ref tin, ref tout);
+                        swap(ref hin, ref hEnd);
                     }
+
                     outIntersect = true;
                 }
             }
@@ -440,6 +599,7 @@ namespace ProceduralModeling_AI
         private void judgePrismIntersetion()
         {
             Vector3[] judgedTriangle = new Vector3[3];
+            Vector3[] judgedPatch = new Vector3[4];
 
             // intersect judge with base triangle
             if (!outIntersect)
@@ -462,43 +622,31 @@ namespace ProceduralModeling_AI
             // intersect judge with rectangle p0 p1 p0Offset p1Offset
             if (!outIntersect)
             {
-                judgedTriangle[0] = basePos0;
-                judgedTriangle[1] = basePos1;
-                judgedTriangle[2] = offsetPos0;
-                judgeTriangleIntersection(judgedTriangle);
-
-                judgedTriangle[0] = offsetPos0;
-                judgedTriangle[1] = basePos1;
-                judgedTriangle[2] = offsetPos1;
-                judgeTriangleIntersection(judgedTriangle);
+                judgedPatch[0] = basePos0;
+                judgedPatch[1] = basePos1;
+                judgedPatch[2] = offsetPos0;
+                judgedPatch[3] = offsetPos1;
+                judgeCoolPatchIntersection(judgedPatch);
             }
 
             // intersect judge with rectangle p1 p2 p1Offset p2Offset
             if (!outIntersect)
             {
-                judgedTriangle[0] = basePos1;
-                judgedTriangle[1] = basePos2;
-                judgedTriangle[2] = offsetPos1;
-                judgeTriangleIntersection(judgedTriangle);
-
-                judgedTriangle[0] = offsetPos1;
-                judgedTriangle[1] = basePos2;
-                judgedTriangle[2] = offsetPos2;
-                judgeTriangleIntersection(judgedTriangle);
+                judgedPatch[0] = basePos1;
+                judgedPatch[1] = basePos2;
+                judgedPatch[2] = offsetPos1;
+                judgedPatch[3] = offsetPos2;
+                judgeCoolPatchIntersection(judgedPatch);
             }
 
             // intersect judge with rectangle p2 p0 p2Offset p0Offset
             if (!outIntersect)
             {
-                judgedTriangle[0] = basePos2;
-                judgedTriangle[1] = basePos0;
-                judgedTriangle[2] = offsetPos2;
-                judgeTriangleIntersection(judgedTriangle);
-
-                judgedTriangle[0] = offsetPos2;
-                judgedTriangle[1] = basePos0;
-                judgedTriangle[2] = offsetPos0;
-                judgeTriangleIntersection(judgedTriangle);
+                judgedPatch[0] = basePos2;
+                judgedPatch[1] = basePos0;
+                judgedPatch[2] = offsetPos2;
+                judgedPatch[3] = offsetPos0;
+                judgeCoolPatchIntersection(judgedPatch);
             }
         }
 
@@ -557,8 +705,6 @@ namespace ProceduralModeling_AI
             Vector2 UV0;
             Vector2 E0;
             Vector2 E1;
-            float uLen = 1.0f;
-            float vLen = 1.0f;
             Vector2 uvwCenter = new Vector2(center[0] + 0.0f, center[2] + 0.0f);
             //float uLen = 4.0f;
             //float vLen = 4.0f;
@@ -585,20 +731,23 @@ namespace ProceduralModeling_AI
             float v1 = (na * E0.y + nb * E1.y + d * UV0.y).y;
             float v0 = (na * E0.y + nb * E1.y + d * UV0.y).z;
 
+            // print d2, d1, d0, a2, a1, a0
+            //Debug.Log("d2:" + d2 + " d1:" + d1 + " d0:" + d0 + " a2:" + a2 + " a1:" + a1 + " a0:" + a0);
+
             // wlength
-            const float scale = 2.0f;
+            const float scale = 3.0f;
             const float wCenter = 0.0f;
-            float delta = 0.001f;
+            float delta = 0.01f;
             // DDA
             {
                 // swap
-                if (hStart > hEnd)
+                if (hin > hEnd)
                 {
                     delta *= -1.0f;
                 }
 
                 int count = 0;
-                float h = hStart;
+                float h = hin;
                 float denom;
                 Vector3 uvw = new Vector3(0.0f, 0.0f, 0.0f);
                 Vector3 uvwPrevious = new Vector3(0.0f, 0.0f, 0.0f);
@@ -609,10 +758,10 @@ namespace ProceduralModeling_AI
                     uvwPrevious[1] = h * scale - wCenter;
                 }
 
-                float tPrevious = tStart;
+                float tPrevious = tin;
                 Color color = new Color(1.0f, 0.0f, 0.0f, 1.0f);
                 while (
-                    ((hStart > hEnd && hEnd < h) || (hStart <= hEnd && h < hEnd)) &&
+                    ((hin > hEnd && hEnd < h) || (hin <= hEnd && h < hEnd)) &&
                     count < 3000)
                 {
                     h = h + delta;
@@ -658,13 +807,15 @@ namespace ProceduralModeling_AI
             rend.material = mat;
             filt.mesh = BuildMesh();
             judgePrismIntersetion();
-            //if (inIntersect && outIntersect)
+            if (inIntersect && outIntersect)
             {
-                Debug.DrawLine(ray_orig, ray_orig + ray_dir * tStart, Color.white);
+                Debug.DrawLine(ray_orig, ray_orig + ray_dir * tin, Color.white);
                 //Debug.DrawLine(ray_orig + ray_dir * tStart, ray_orig + ray_dir * tEnd, Color.magenta);
-                Debug.DrawLine(ray_orig + ray_dir * tEnd, ray_orig + ray_dir * 10.0f, Color.white);
+                Debug.DrawLine(ray_orig + ray_dir * tout, ray_orig + ray_dir * 5.0f, Color.white);
+                transmittanceHDDA(0);
             }
-            transmittanceHDDA(0);
+            inIntersect = false;
+            outIntersect = false;
         }
     } // class
 } // namespace

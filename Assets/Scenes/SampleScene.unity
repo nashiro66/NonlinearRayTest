@@ -211,7 +211,7 @@ Transform:
   m_GameObject: {fileID: 705507993}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: -2.77, y: 3, z: -1.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -368,14 +368,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbab6fbee6f6a8942b5e5b083c1dda4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  offsetPos0: {x: -1, y: 4, z: -1}
-  a: 0.8
-  b: 0.8
-  c: 0.8
-  d: 0.8
-  mat: {fileID: 2100000, guid: dbe40dfb3249aca43ba4e4bf028c6b5e, type: 2}
-  ray_orig: {x: -2, y: 4, z: 0}
-  ray_dir: {x: 5, y: -5, z: -3}
+  offsetPos0: {x: -3.89, y: 3, z: 1.28}
+  offsetPos1: {x: 1, y: 3, z: -1}
+  offsetPos2: {x: 1, y: 3, z: 1}
+  offsetPos3: {x: 1, y: 3, z: 1}
+  mat: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  ray_orig: {x: -2, y: 3, z: 0.3}
+  ray_dir: {x: 0.859812, y: -0.490839, z: -0.140707}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
