@@ -368,11 +368,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbab6fbee6f6a8942b5e5b083c1dda4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  offsetPos0: {x: -3.89, y: 3, z: 1.28}
+  offsetPos0: {x: -1, y: 3, z: -1}
   offsetPos1: {x: 1, y: 3, z: -1}
-  offsetPos2: {x: 1, y: 3, z: 1}
+  offsetPos2: {x: -1, y: 3, z: 1}
   offsetPos3: {x: 1, y: 3, z: 1}
-  mat: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  mat: {fileID: 10650, guid: 0000000000000000f000000000000000, type: 0}
   ray_orig: {x: -2, y: 3, z: 0.3}
   ray_dir: {x: 0.859812, y: -0.490839, z: -0.140707}
 --- !u!1660057539 &9223372036854775807
